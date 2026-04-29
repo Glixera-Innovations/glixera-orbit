@@ -32,8 +32,15 @@ export async function getDisplayName(userId: number | bigint): Promise<string> {
   return (await getCachedUserInfo(toNumber(userId))).displayName;
 }
 
-export function getThumbnail(userId: number | bigint): string {
-  return `/api/workspace/[id]/avatar/${userId}`;
+export function getThumbnail(
+  userId: number | bigint,
+  workspaceGroupId?: number | bigint | null
+): string {
+  const wid =
+    workspaceGroupId !== undefined && workspaceGroupId !== null
+      ? Number(workspaceGroupId)
+      : 0;
+  return `/api/workspace/${wid}/avatar/${Number(userId)}`;
 }
 
 export { getRobloxUsername };

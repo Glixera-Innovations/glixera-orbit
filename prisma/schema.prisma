@@ -328,6 +328,7 @@ model ActivitySession {
   idleTime         BigInt?
   workspaceGroupId Int
   messages         Int?
+  chatLog          Json?
   universeId       BigInt?
   sessionMessage   String?
   archived         Boolean?  @default(false)

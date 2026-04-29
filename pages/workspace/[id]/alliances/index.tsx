@@ -32,11 +32,12 @@ type Form = {
 
 export const getServerSideProps = withPermissionCheckSsr(
   async ({ req, res, params }) => {
+    const wsId = parseInt(params?.id as string, 10);
     let users = await prisma.user.findMany({
       where: {
         roles: {
           some: {
-            workspaceGroupId: parseInt(params?.id as string),
+            workspaceGroupId: wsId,
             permissions: {
               has: "represent_alliance",
             },
@@ -49,14 +50,14 @@ export const getServerSideProps = withPermissionCheckSsr(
         return {
           ...user,
           userid: Number(user.userid),
-          thumbnail: getThumbnail(user.userid),
+          thumbnail: getThumbnail(user.userid, wsId),
         };
       })
     );
 
     const allies: any = await prisma.ally.findMany({
       where: {
-        workspaceGroupId: parseInt(params?.id as string),
+        workspaceGroupId: wsId,
       },
       include: {
         reps: true,
@@ -70,7 +71,7 @@ export const getServerSideProps = withPermissionCheckSsr(
               ...rep,
               userid: Number(rep.userid),
               username: await getUsername(rep.userid),
-              thumbnail: getThumbnail(rep.userid),
+              thumbnail: getThumbnail(rep.userid, wsId),
             };
           })
         );

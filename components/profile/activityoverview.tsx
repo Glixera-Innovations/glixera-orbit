@@ -1,5 +1,5 @@
-import React, { Fragment, useState, useEffect, useMemo } from "react";
-import { Dialog, Transition } from "@headlessui/react";
+import React, { useState, useEffect, useMemo } from "react";
+import { ActivitySessionDetailsDialog } from "@/components/activity/ActivitySessionDetailsDialog";
 import { useRouter } from "next/router";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -38,35 +38,6 @@ ChartJS.register(
   ChartTooltip,
   Legend
 );
-
-const BG_COLORS = [
-  "bg-rose-300",
-  "bg-lime-300",
-  "bg-teal-200",
-  "bg-amber-300",
-  "bg-rose-200",
-  "bg-lime-200",
-  "bg-green-100",
-  "bg-red-100",
-  "bg-yellow-200",
-  "bg-amber-200",
-  "bg-emerald-300",
-  "bg-green-300",
-  "bg-red-300",
-  "bg-emerald-200",
-  "bg-green-200",
-  "bg-red-200",
-];
-
-function getRandomBg(userid: string, username?: string) {
-  const key = `${userid ?? ""}:${username ?? ""}`;
-  let hash = 5381;
-  for (let i = 0; i < key.length; i++) {
-    hash = ((hash << 5) - hash) ^ key.charCodeAt(i);
-  }
-  const index = (hash >>> 0) % BG_COLORS.length;
-  return BG_COLORS[index];
-}
 
 type TimelineItem =
   | ({ __type: "session" } & ActivitySession & {
@@ -469,163 +440,15 @@ export function ActivityOverview({
         </div>
       </div>
 
-      <Transition appear show={isOpen} as={Fragment}>
-        <Dialog
-          as="div"
-          className="relative z-10"
-          onClose={() => setIsOpen(false)}
-        >
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
-          </Transition.Child>
-
-          <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4 text-center">
-              <Transition.Child
-                as={Fragment}
-                enter="ease-out duration-300"
-                enterFrom="opacity-0 scale-95"
-                enterTo="opacity-100 scale-100"
-                leave="ease-in duration-200"
-                leaveFrom="opacity-100 scale-100"
-                leaveTo="opacity-0 scale-95"
-              >
-                <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-xl bg-white dark:bg-zinc-800 text-left align-middle shadow-xl transition-all">
-                  {dialogData?.universe?.thumbnail && (
-                    <div className="relative h-32 bg-gradient-to-r from-blue-500 to-purple-600">
-                      <img
-                        src={dialogData.universe.thumbnail}
-                        alt="Game thumbnail"
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-                    </div>
-                  )}
-
-                  <div className="p-6 border-b border-zinc-200 dark:border-zinc-700">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="bg-primary/10 p-2 rounded-lg">
-                        <IconClock className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <Dialog.Title
-                          as="h3"
-                          className="text-xl font-semibold text-zinc-900 dark:text-white"
-                        >
-                          {dialogData?.data?.sessionMessage ||
-                            dialogData?.universe?.name ||
-                            "Unknown Game"}
-                        </Dialog.Title>
-                        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                          Activity Session Details
-                        </p>
-                      </div>
-                    </div>
-                    {concurrentUsers.length > 0 && (
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                          Played with:
-                        </span>
-                        <div className="flex flex-wrap gap-2">
-                          {concurrentUsers.map((user: any) => (
-                            <div
-                              key={user.userId}
-                              className={`w-8 h-8 rounded-full overflow-hidden ring-2 ring-white dark:ring-zinc-800 ${getRandomBg(
-                                user.userId
-                              )}`}
-                              title={user.username}
-                            >
-                              <img
-                                src={user.picture || "/default-avatar.jpg"}
-                                alt={user.username}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-6">
-                    {loading ? (
-                      <div className="flex items-center justify-center h-32">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-4">
-                        <div className="bg-zinc-50 dark:bg-zinc-700/50 rounded-lg p-4 text-center">
-                          <div className="text-2xl font-bold text-zinc-900 dark:text-white mb-1">
-                            {(() => {
-                              const duration = moment.duration(
-                                moment(dialogData.data?.endTime).diff(
-                                  moment(dialogData.data?.startTime)
-                                )
-                              );
-                              const minutes = Math.floor(duration.asMinutes());
-                              return `${minutes} ${
-                                minutes === 1 ? "minute" : "minutes"
-                              }`;
-                            })()}
-                          </div>
-                          <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                            Duration
-                          </div>
-                        </div>
-                        <div
-                          className={`grid ${
-                            idleTimeEnabled ? "grid-cols-2" : "grid-cols-1"
-                          } gap-4`}
-                        >
-                          {idleTimeEnabled && (
-                            <div className="bg-zinc-50 dark:bg-zinc-700/50 rounded-lg p-4 text-center">
-                              <div className="text-xl font-semibold text-zinc-900 dark:text-white mb-1">
-                                {dialogData.data?.idleTime || 0}
-                              </div>
-                              <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                                Idle{" "}
-                                {(dialogData.data?.idleTime || 0) === 1
-                                  ? "minute"
-                                  : "minutes"}
-                              </div>
-                            </div>
-                          )}
-                          <div className="bg-zinc-50 dark:bg-zinc-700/50 rounded-lg p-4 text-center">
-                            <div className="text-xl font-semibold text-zinc-900 dark:text-white mb-1">
-                              {dialogData.data?.messages || 0}
-                            </div>
-                            <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                              {(dialogData.data?.messages || 0) === 1
-                                ? "Message"
-                                : "Messages"}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    <div className="mt-6">
-                      <button
-                        type="button"
-                        className="w-full justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        Close
-                      </button>
-                    </div>
-                  </div>
-                </Dialog.Panel>
-              </Transition.Child>
-            </div>
-          </div>
-        </Dialog>
-      </Transition>
+      <ActivitySessionDetailsDialog
+        open={isOpen}
+        loading={loading}
+        onClose={() => setIsOpen(false)}
+        session={dialogData?.data ?? null}
+        universe={dialogData?.universe}
+        concurrentUsers={concurrentUsers}
+        idleTimeEnabled={idleTimeEnabled}
+      />
     </div>
   );
 }

@@ -49,7 +49,7 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     const infoUsers = users.map((user: any) => {
       return {
         username: user.username,
-        thumbnail: getThumbnail(user.userid),
+        thumbnail: getThumbnail(user.userid, parseInt(req.query.id as string)),
       };
     });
 

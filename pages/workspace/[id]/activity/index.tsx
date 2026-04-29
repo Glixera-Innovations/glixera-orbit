@@ -3,7 +3,7 @@ import { pageWithLayout } from "@/layoutTypes";
 import { loginState, workspacestate } from "@/state";
 import axios from "axios";
 import { useRouter } from "next/router";
-import { useEffect, useState, useMemo, Fragment } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRecoilState } from "recoil";
 import moment from "moment";
 import {
@@ -24,7 +24,7 @@ import {
 import Tooltip from "@/components/tooltip";
 import randomText from "@/utils/randomText";
 import toast, { Toaster } from "react-hot-toast";
-import { Dialog, Transition } from "@headlessui/react";
+import { ActivitySessionDetailsDialog } from "@/components/activity/ActivitySessionDetailsDialog";
 
 const Activity: pageWithLayout = () => {
 	const router = useRouter();
@@ -58,14 +58,12 @@ const Activity: pageWithLayout = () => {
 				);
 				const profileData = profileRes.data.data;
 
-				// Fetch activity config to check if idle time tracking is enabled
 				const configRes = await axios.get(
 					`/api/workspace/${id}/settings/activity/getConfig`
 				);
 				const idleTracking = configRes.data.idleTimeEnabled ?? true;
 				setIdleTimeEnabled(idleTracking);
 				
-				// Fetch the API key from the config endpoint
 				if (configRes.data.apiKey) {
 					setaccessApiKey(configRes.data.apiKey);
 				}
@@ -921,166 +919,15 @@ const Activity: pageWithLayout = () => {
 				</div>
 			</div>
 
-			<Transition appear show={isSessionModalOpen} as={Fragment}>
-				<Dialog
-					as="div"
-					className="relative z-10"
-					onClose={() => setIsSessionModalOpen(false)}
-				>
-					<Transition.Child
-						as={Fragment}
-						enter="ease-out duration-300"
-						enterFrom="opacity-0"
-						enterTo="opacity-100"
-						leave="ease-in duration-200"
-						leaveFrom="opacity-100"
-						leaveTo="opacity-0"
-					>
-						<div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
-					</Transition.Child>
-					<div className="fixed inset-0 overflow-y-auto">
-						<div className="flex min-h-full items-center justify-center p-4 text-center">
-							<Transition.Child
-								as={Fragment}
-								enter="ease-out duration-300"
-								enterFrom="opacity-0 scale-95"
-								enterTo="opacity-100 scale-100"
-								leave="ease-in duration-200"
-								leaveFrom="opacity-100 scale-100"
-								leaveTo="opacity-0 scale-95"
-							>
-								<Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-xl bg-white dark:bg-zinc-800 text-left align-middle shadow-xl transition-all">
-									{sessionDetails?.universe?.thumbnail && (
-										<div className="relative h-32 bg-gradient-to-r from-blue-500 to-purple-600">
-											<img
-												src={sessionDetails.universe.thumbnail}
-												alt="Game thumbnail"
-												className="w-full h-full object-cover"
-											/>
-											<div className="absolute inset-0 bg-black bg-opacity-20"></div>
-										</div>
-									)}
-									<div className="p-6 border-b border-zinc-200 dark:border-zinc-700">
-										<div className="flex items-center gap-3 mb-4">
-											<div className="bg-primary/10 p-2 rounded-lg">
-												<IconClock className="w-5 h-5 text-primary" />
-											</div>
-											<div>
-												<Dialog.Title
-													as="h3"
-													className="text-xl font-semibold text-zinc-900 dark:text-white"
-												>
-													{sessionDetails?.message?.sessionMessage ||
-														sessionDetails?.universe?.name ||
-														"Unknown Game"}
-												</Dialog.Title>
-												<p className="text-sm text-zinc-500 dark:text-zinc-400">
-													Activity Session Details
-												</p>
-											</div>
-										</div>
-										{concurrentUsers.length > 0 && (
-											<div className="flex items-center gap-3">
-												<span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-													Played with:
-												</span>
-												<div className="flex flex-wrap gap-2">
-													{concurrentUsers.map((user: any) => (
-														<div
-															key={user.userId}
-															className={`w-8 h-8 rounded-full overflow-hidden ring-2 ring-white dark:ring-zinc-800 ${getRandomBg(
-																user.userId,
-																user.username
-															)}`}
-															title={user.username}
-														>
-															<img
-																src={user.picture || "/default-avatar.jpg"}
-																alt={user.username}
-																className="w-full h-full object-cover"
-															/>
-														</div>
-													))}
-												</div>
-											</div>
-										)}
-									</div>
-									<div className="p-6">
-										{loadingSession ? (
-											<div className="flex items-center justify-center h-32">
-												<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-											</div>
-										) : (
-											<div className="grid grid-cols-1 gap-4">
-												<div className="bg-zinc-50 dark:bg-zinc-700/50 rounded-lg p-4 text-center">
-													<div className="text-2xl font-bold text-zinc-900 dark:text-white mb-1">
-														{(() => {
-															if (
-																!sessionDetails.message?.endTime ||
-																!sessionDetails.message?.startTime
-															) {
-																return "Ended";
-															}
-															const duration = moment.duration(
-																moment(sessionDetails.message.endTime).diff(
-																	moment(sessionDetails.message.startTime)
-																)
-															);
-															const minutes = Math.floor(duration.asMinutes());
-															return `${minutes} ${minutes === 1 ? "minute" : "minutes"
-																}`;
-														})()}
-													</div>
-													<div className="text-sm text-zinc-600 dark:text-zinc-400">
-														Duration
-													</div>
-												</div>
-												<div
-													className={`grid ${idleTimeEnabled ? "grid-cols-2" : "grid-cols-1"
-														} gap-4`}
-												>
-													{idleTimeEnabled && (
-														<div className="bg-zinc-50 dark:bg-zinc-700/50 rounded-lg p-4 text-center">
-															<div className="text-xl font-semibold text-zinc-900 dark:text-white mb-1">
-																{sessionDetails.message?.idleTime || 0}
-															</div>
-															<div className="text-sm text-zinc-600 dark:text-zinc-400">
-																Idle{" "}
-																{(sessionDetails.message?.idleTime || 0) === 1
-																	? "minute"
-																	: "minutes"}
-															</div>
-														</div>
-													)}
-													<div className="bg-zinc-50 dark:bg-zinc-700/50 rounded-lg p-4 text-center">
-														<div className="text-xl font-semibold text-zinc-900 dark:text-white mb-1">
-															{sessionDetails.message?.messages || 0}
-														</div>
-														<div className="text-sm text-zinc-600 dark:text-zinc-400">
-															{(sessionDetails.message?.messages || 0) === 1
-																? "Message"
-																: "Messages"}
-														</div>
-													</div>
-												</div>
-											</div>
-										)}
-										<div className="mt-6">
-											<button
-												type="button"
-												className="w-full justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
-												onClick={() => setIsSessionModalOpen(false)}
-											>
-												Close
-											</button>
-										</div>
-									</div>
-								</Dialog.Panel>
-							</Transition.Child>
-						</div>
-					</div>
-				</Dialog>
-			</Transition>
+			<ActivitySessionDetailsDialog
+				open={isSessionModalOpen}
+				loading={loadingSession}
+				onClose={() => setIsSessionModalOpen(false)}
+				session={sessionDetails?.message ?? null}
+				universe={sessionDetails?.universe}
+				concurrentUsers={concurrentUsers}
+				idleTimeEnabled={idleTimeEnabled}
+			/>
 
 			<Toaster position="bottom-center" />
 		</div>

@@ -1,4 +1,3 @@
-// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@/utils/database";
 import { withSessionRoute } from "@/lib/withSession";
@@ -6,6 +5,7 @@ import * as noblox from "noblox.js";
 import { getUsername, getThumbnail } from "@/utils/userinfoEngine";
 import { checkSpecificUser } from "@/utils/permissionsManager";
 import { generateSessionTimeMessage } from "@/utils/sessionMessage";
+import { deriveActivityEndChatFields } from "@/utils/activitySessionChat";
 
 (BigInt.prototype as any).toJSON = function () {
 	return this.toString();
@@ -53,7 +53,7 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
 	}
 
 	if (req.method == "POST") {
-		const { userid, placeid, idleTime, messages } = req.body;
+		const { userid, placeid, idleTime } = req.body;
 		const { type } = req.query;
 
 		if (!userid || isNaN(userid))
@@ -103,7 +103,7 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
 			}
 
 			const username = await getUsername(userid);
-			const picture = await getThumbnail(userid);
+			const picture = getThumbnail(userid, groupId);
 
 			try {
 				await prisma.user.upsert({
@@ -188,13 +188,17 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
 						.json({ success: false, error: "Session not found" });
 				}
 
+				const { messages: messagesCount, chatLog } =
+					deriveActivityEndChatFields(req.body as Record<string, unknown>);
+
 				await prisma.activitySession.update({
 					where: { id: session.id },
 					data: {
 						endTime: new Date(),
 						active: false,
 						idleTime: idleTime ? Number(idleTime) : 0,
-						messages: messages ? Number(messages) : 0,
+						messages: messagesCount,
+						...(chatLog !== undefined ? { chatLog } : {}),
 					},
 				});
 

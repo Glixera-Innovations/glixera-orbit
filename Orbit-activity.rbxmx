@@ -22,11 +22,12 @@ local Close = Instance.new("BindableEvent")
 local OrbitData = DataStoreService:GetDataStore("OrbitActivity")
 
 -- Set up tables
-local messageTable = {}
+local chatLogTable = {}
 local rankTable = {}
 local afkTable = {}
 
--- Configuration
+-- Configuration (must precede helpers that reference it)
+
 local Configuration = {
 	-- Do not touch
 	url = "<url>",
@@ -39,7 +40,48 @@ local Configuration = {
 	groupId = 0, -- The group ID to perform activity tracking for
 	minTrackedRank = 0,	 -- The minimum rank ID to perform activity tracking for (This value is retrieved from your Orbit instance on game launch)
 	minutesTillAFK = 2, -- How long a player can last without moving before being marked AFK
+	maxStoredChatLines = 200,
+	maxChatCharsPerLine = 512,
 }
+
+local function stripChat(text: string)
+	return (text:gsub("^%s+", ""):gsub("%s+$", ""))
+end
+
+local function appendChatLine(userId: number, raw: unknown)
+	local log = chatLogTable[userId]
+	if not log then
+		return
+	end
+	local text = if type(raw) == "string" then raw else ""
+	text = stripChat(text :: any)
+	if text == "" then
+		return
+	end
+	local maxChars = Configuration.maxChatCharsPerLine
+	if maxChars > 0 and #text > maxChars then
+		text = text:sub(1, maxChars)
+	end
+	table.insert(log, text)
+	local cap = Configuration.maxStoredChatLines
+	while cap > 0 and #log > cap do
+		table.remove(log, 1)
+	end
+end
+
+local function collectSessionEndRow(Player: Player): { [string]: unknown }
+	local log = chatLogTable[Player.UserId] or {}
+	local row: { [string]: unknown } = {
+		userid = Player.UserId,
+		idleTime = Player["Orbit AFK Timer"].Value,
+		messages = #log,
+	}
+	if #log > 0 then
+		row.chatBodies = log
+	end
+	return row
+end
+
 
 if Configuration.privateEnabled == false then
 	if game:GetService("RunService"):IsStudio() or game.PrivateServerId ~= "" and game.PrivateServerOwnerId ~= 0 then
@@ -105,7 +147,7 @@ local function EndSession(Player)
 		local request = HttpQueue.HttpRequest.new(
 			Configuration.url .. "/api/activity/session?type=end",
 			"POST",
-			HttpService:JSONEncode({ userid = Player.UserId, idleTime = Player["Orbit AFK Timer"].Value, messages = messageTable[Player.UserId] }),
+			HttpService:JSONEncode(collectSessionEndRow(Player)),
 			nil,
 			{
 				["Content-Type"] = "application/json",
@@ -164,7 +206,7 @@ local function InitiateTovy(Player:Player)
 	rankTable[Player.UserId] = {
 		Rank = Player:GetRankInGroupAsync(Configuration.groupId)
 	}
-	messageTable[Player.UserId] = 0
+	chatLogTable[Player.UserId] = {}
 	if isUserTracked(Player) then 
 		local TovyAFKTimer = Instance.new("NumberValue", Player)
 		TovyAFKTimer.Name = "Orbit AFK Timer"
@@ -182,9 +224,9 @@ Players.PlayerAdded:Connect(function(Player)
 	Player.CharacterAdded:Connect(function()
 		MovementDetection(Player)
 	end)
-	Player.Chatted:Connect(function()
+	Player.Chatted:Connect(function(Message)
 		if isUserTracked(Player) then
-			messageTable[Player.UserId] += 1
+			appendChatLine(Player.UserId, Message)
 		end
 	end)
 end)
@@ -193,10 +235,10 @@ Players.PlayerRemoving:Connect(function(Player)
 	EndSession(Player)
 	rankTable[Player.UserId] = nil
 	
-	if messageTable[Player.UserId] then
-		messageTable[Player.UserId] = nil
+	if chatLogTable[Player.UserId] ~= nil then
+		chatLogTable[Player.UserId] = nil
 	end
-	
+
 	if afkTable[Player] then
 		afkTable[Player] = nil
 	end
@@ -206,11 +248,7 @@ game:BindToClose(function()
 	local sessions = {}
 	for _, Player in pairs(Players:GetPlayers()) do
 		if isUserTracked(Player) then
-			table.insert(sessions, {
-				userid = Player.UserId,
-				idleTime = Player["Orbit AFK Timer"].Value,
-				messages = messageTable[Player.UserId]
-			})
+			table.insert(sessions, collectSessionEndRow(Player))
 		end
 	end
 
@@ -254,7 +292,7 @@ while true do
 	for _, Player in pairs(Players:GetPlayers()) do
 		if isUserTracked(Player) and not isSessionActive(Player) then
 			warn("Orbit: No active session found for " .. Player.Name .. ", recreating.")
-			messageTable[Player.UserId] = 0
+			chatLogTable[Player.UserId] = {}
 			local t = Player["Orbit AFK Timer"]
 			if t then t.Value = 0 end
 			CreateSession(Player)

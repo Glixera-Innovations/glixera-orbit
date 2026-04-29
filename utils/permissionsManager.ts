@@ -698,7 +698,7 @@ export async function checkGroupRoles(groupID: number) {
               create: {
                 userid: BigInt(userId),
                 username,
-                picture: getThumbnail(userId),
+                picture: getThumbnail(userId, groupID),
                 roles: { connect: { id: workspaceRole.id } },
               },
               update: {

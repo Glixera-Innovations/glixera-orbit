@@ -106,7 +106,7 @@ export async function handler(
 		userid: Number(user.userid),
 		username: req.body.username,
 		displayName: await getDisplayName(userid),
-		thumbnail: await getThumbnail(userid)
+		thumbnail: getThumbnail(userid, parseInt(req.query.id as string))
 	}
 
 	try { await logAudit(parseInt(req.query.id as string), (req as any).session?.userid || null, 'settings.users.add', `user:${Number(user.userid)}`, { userId: Number(user.userid), username: req.body.username, role: role.id }); } catch (e) {}
