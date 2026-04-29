@@ -729,7 +729,7 @@ const Views: pageWithLayout<pageProps> = ({ isAdmin, hasManageViewsPerm, hasCrea
         promises.push(
           axios.post(
             `/api/workspace/${router.query.id}/userbook/${data.info.userId}/new`,
-            { notes: message, type }
+            { notes: message.length > 0 ? message : "Not provided.", type }
           )
         );
       }

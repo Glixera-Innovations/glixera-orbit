@@ -36,9 +36,49 @@ async function syncWorkspaceMemberRankFromRobloxNoblox(
   userId: number
 ): Promise<{ rankAfter: number; rankNameAfter: string | null } | null> {
   try {
-    const newRank = await noblox.getRankInGroup(workspaceGroupId, userId);
-    const newRankInfo = await noblox.getRole(workspaceGroupId, newRank);
-    const rankNameAfter = newRankInfo?.name || null;
+    const ocConf = await getConfig("roblox_opencloud", workspaceGroupId);
+    const newRank = await rbx.getUserRank(
+      BigInt(userId),
+      BigInt(workspaceGroupId),
+      ocConf.key
+    );
+
+    if (!newRank) {
+      await prisma.rank.deleteMany({
+        where: {
+          userId: BigInt(userId),
+          workspaceGroupId,
+        },
+      });
+
+      const currentUser = await prisma.user.findFirst({
+        where: { userid: BigInt(userId) },
+        include: {
+          roles: {
+            where: { workspaceGroupId },
+          },
+        },
+      });
+
+      if (currentUser?.roles?.length) {
+        await prisma.user.update({
+          where: { userid: BigInt(userId) },
+          data: {
+            roles: {
+              disconnect: currentUser.roles.map((r) => ({ id: r.id })),
+            },
+          },
+        });
+      }
+
+      return {
+        rankAfter: 0,
+        rankNameAfter: "Guest",
+      };
+    }
+
+    const rankValue = Number(newRank.rank);
+    const rankNameAfter = newRank.roleName || null;
 
     await prisma.rank.upsert({
       where: {
@@ -48,22 +88,23 @@ async function syncWorkspaceMemberRankFromRobloxNoblox(
         },
       },
       update: {
-        rankId: BigInt(newRank),
+        rankId: BigInt(rankValue),
       },
       create: {
         userId: BigInt(userId),
         workspaceGroupId,
-        rankId: BigInt(newRank),
+        rankId: BigInt(rankValue),
       },
     });
 
-    const rankInfo = await noblox.getRole(workspaceGroupId, newRank);
+    const rankInfo = await noblox.getRole(workspaceGroupId, rankValue);
+
     if (rankInfo) {
       const role = await prisma.role.findFirst({
         where: {
           workspaceGroupId,
           groupRoles: {
-            hasSome: [rankInfo.id],
+            hasSome: [BigInt(rankInfo.id)],
           },
         },
       });
@@ -78,41 +119,38 @@ async function syncWorkspaceMemberRankFromRobloxNoblox(
           },
         });
 
-        if (currentUser && currentUser.roles.length > 0) {
-          for (const oldRole of currentUser.roles) {
-            await prisma.user.update({
-              where: {
-                userid: BigInt(userId),
+        if (currentUser?.roles?.length) {
+          await prisma.user.update({
+            where: { userid: BigInt(userId) },
+            data: {
+              roles: {
+                disconnect: currentUser.roles.map((r) => ({ id: r.id })),
               },
-              data: {
-                roles: {
-                  disconnect: {
-                    id: oldRole.id,
-                  },
-                },
-              },
-            });
-          }
+            },
+          });
         }
 
         await prisma.user.update({
-          where: {
-            userid: BigInt(userId),
-          },
+          where: { userid: BigInt(userId) },
           data: {
             roles: {
-              connect: {
-                id: role.id,
-              },
+              connect: { id: role.id },
             },
           },
         });
       }
     }
 
-    return { rankAfter: newRank, rankNameAfter };
+    return {
+      rankAfter: rankValue,
+      rankNameAfter,
+    };
+
   } catch (rankUpdateError) {
-    console.error("Error updating user rank in database:", rankUpdateError);
+    console.error(
+      "Error updating user rank in database:",
+      rankUpdateError
+    );
     return null;
   }
 }
@@ -212,8 +250,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   const opencloudKey = await getConfig("roblox_opencloud", workspaceGroupId);
   const configOpenCloudApiKey =
     opencloudKey &&
-    typeof (opencloudKey as { key?: string }).key === "string" &&
-    (opencloudKey as { key: string }).key.length > 0
+      typeof (opencloudKey as { key?: string }).key === "string" &&
+      (opencloudKey as { key: string }).key.length > 0
       ? (opencloudKey as { key: string }).key
       : null;
   const externalRanking = await prisma.workspaceExternalServices.findFirst({
@@ -221,13 +259,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   });
   const integratedRankingKey =
     externalRanking?.rankingProvider === "opencloudranking" &&
-    typeof externalRanking?.rankingToken === "string" &&
-    externalRanking.rankingToken.length > 0
+      typeof externalRanking?.rankingToken === "string" &&
+      externalRanking.rankingToken.length > 0
       ? externalRanking.rankingToken
       : null;
   const promotionRankCap =
     typeof externalRanking?.rankingMaxRank === "number" &&
-    externalRanking.rankingMaxRank >= 1
+      externalRanking.rankingMaxRank >= 1
       ? externalRanking.rankingMaxRank
       : null;
   const rankingRobloxApiKey =
