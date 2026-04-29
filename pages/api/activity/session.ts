@@ -103,7 +103,7 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
 			}
 
 			const username = await getUsername(userid);
-			const picture = await getThumbnail(userid);
+			const picture = getThumbnail(userid, groupId);
 
 			try {
 				await prisma.user.upsert({

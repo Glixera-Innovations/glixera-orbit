@@ -275,7 +275,7 @@ export default withSessionRoute(async function handler(
 
     const allianceVisitsCount = allianceVisits.length;
 
-    const avatar = getThumbnail(user.userid);
+    const avatar = getThumbnail(user.userid, workspaceGroupId);
 
     const quotas = user.roles
       .flatMap((role) => role.quotaRoles)

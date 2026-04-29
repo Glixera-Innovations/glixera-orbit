@@ -37,11 +37,12 @@ import {
 
 export const getServerSideProps = withPermissionCheckSsr(
   async ({ req, res, params }) => {
+    const wsId = parseInt(params?.id as string, 10);
     let users = await prisma.user.findMany({
       where: {
         roles: {
           some: {
-            workspaceGroupId: parseInt(params?.id as string),
+            workspaceGroupId: wsId,
             permissions: {
               has: "represent_alliance",
             },
@@ -54,7 +55,7 @@ export const getServerSideProps = withPermissionCheckSsr(
         return {
           ...user,
           userid: Number(user.userid),
-          thumbnail: getThumbnail(user.userid),
+          thumbnail: getThumbnail(user.userid, wsId),
         };
       })
     );
@@ -82,7 +83,7 @@ export const getServerSideProps = withPermissionCheckSsr(
           ...rep,
           userid: Number(rep.userid),
           username: await getUsername(rep.userid),
-          thumbnail: getThumbnail(rep.userid),
+          thumbnail: getThumbnail(rep.userid, wsId),
         };
       })
     );
@@ -114,7 +115,7 @@ export const getServerSideProps = withPermissionCheckSsr(
           ...visit,
           hostId: Number(visit.hostId),
           hostUsername: await getUsername(visit.hostId),
-          hostThumbnail: getThumbnail(visit.hostId),
+          hostThumbnail: getThumbnail(visit.hostId, wsId),
           time: new Date(visit.time).toISOString(),
           participants: visit.participants
             ? visit.participants.map((p: bigint) => Number(p))
@@ -136,7 +137,7 @@ export const getServerSideProps = withPermissionCheckSsr(
           include: {
             roles: {
               where: {
-                workspaceGroupId: parseInt(params?.id as string),
+                workspaceGroupId: wsId,
               },
               orderBy: {
                 isOwnerRole: "desc",

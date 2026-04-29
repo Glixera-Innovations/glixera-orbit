@@ -80,7 +80,7 @@ export const getServerSideProps: GetServerSideProps = withPermissionCheckSsr(asy
   const usersWithInfo = await Promise.all(
     users.map(async (user) => {
       const username = user.username || (await getUsername(user.userid))
-      const thumbnail = user.picture || getThumbnail(user.userid)
+      const thumbnail = user.picture || getThumbnail(user.userid, workspaceGroupId)
       const displayName = user.username || (await getDisplayName(user.userid))
       return {
         ...user,
