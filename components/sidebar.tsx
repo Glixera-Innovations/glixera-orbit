@@ -102,7 +102,7 @@ function MobileWorkspaceSwitcher({
         <>
           <div
             className={clsx(
-              "fixed inset-0 z-[99995] bg-black/40 backdrop-blur-sm rounded-3xl",
+              "fixed inset-0 z-[99995] bg-black/40 rounded-3xl",
               "transition-opacity duration-[280ms] ease-out",
               visible ? "opacity-100" : "opacity-0"
             )}
@@ -702,7 +702,7 @@ const Sidebar: NextPage<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
         <>
           <div
             className={clsx(
-              "fixed inset-0 z-[99991] bg-black/30",
+              "fixed inset-0 z-[99991] bg-black/30 backdrop-blur-sm",
               "transition-opacity duration-300 ease-out",
               mobileMoreVisible ? "opacity-100" : "opacity-0"
             )}
