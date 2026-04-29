@@ -252,7 +252,7 @@ export async function promoteUser(
       filter: `user == 'users/${userid}'`
     });
 
-    const groupRolesList = await listAllGroupRolesForGroup(Client, groupid.toString());
+    const groupRolesList = await getAllRoles(groupid, apiKey)
 
     if (userRoles.groupMemberships.length === 0) {
       return {
@@ -319,7 +319,7 @@ export async function demoteUser(userid: number, groupid: number, apiKey: string
       filter: `user == 'users/${userid}'`
     });
 
-    const groupRolesList = await listAllGroupRolesForGroup(Client, groupid.toString());
+    const groupRolesList = await getAllRoles(groupid, apiKey)
 
     if (userRoles.groupMemberships.length === 0) {
       return {
@@ -378,7 +378,7 @@ export async function rankChange(
   const Client = await initiateClient(apiKey);
 
   try {
-    const groupRolesList = await listAllGroupRolesForGroup(Client, groupid.toString());
+    const groupRolesList = await getAllRoles(groupid, apiKey)
     const TargetRole = groupRolesList.find((grole) => Number(grole.rank) === rankid);
 
     if (!TargetRole) {
