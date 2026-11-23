@@ -16,24 +16,3 @@ services:
       - '3000:3000'
     command: >
       sh -c "pnpm exec prisma migrate deploy && pnpm run start"
-
-  db:
-    image: 'postgres:latest'
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h localhost']
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
-    environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - '${POSTGRES_PORT:-5432}:5432'
-    volumes:
-      - db:/var/lib/postgresql
-
-volumes:
-  db:
-    driver: local
