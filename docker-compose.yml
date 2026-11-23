@@ -12,4 +12,4 @@ services:
     ports:
       - '9001:9001'
     command: >
-      sh -c "pnpm exec prisma migrate deploy && pnpm run start"
+      sh -c "pnpm exec prisma migrate deploy && pnpm run start -p 9001"
